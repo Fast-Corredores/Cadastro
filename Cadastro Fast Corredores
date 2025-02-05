@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha de Cadastro - FAST CORREDORES</title>
+  <!-- Biblioteca jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* Estilos gerais */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      width: 100%;
+      max-width: 500px;
+      border: 2px solid #003366; /* Azul Escuro */
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin: 20px;
+    }
+    h1 {
+      background: #003366; /* Azul Escuro */
+      color: #FFEF00; /* Amarelo Canário */
+      text-align: center;
+      padding: 15px;
+      border-radius: 6px 6px 0 0;
+      font-size: 24px;
+    }
+    form {
+      padding: 20px;
+    }
+    form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #003366;
+    }
+    form input, form select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      transition: border-color 0.3s;
+    }
+    form input:focus, form select:focus {
+      border-color: #003366;
+      outline: none;
+    }
+    .button-container {
+      text-align: center;
+      margin-top: 10px;
+    }
+    button {
+      background: #FFEF00; /* Amarelo Canário */
+      color: #003366;      /* Azul Escuro */
+      padding: 12px 25px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #e6d500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FAST CORREDORES</h1>
+    <form id="cadastroForm">
+      <label for="nome">Nome:</label>
+      <input type="text" id="nome" name="nome" placeholder="Seu nome completo" required>
+
+      <label for="dataNascimento">Data de Nascimento:</label>
+      <input type="date" id="dataNascimento" name="dataNascimento" required>
+
+      <label for="cpf">CPF:</label>
+      <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required>
+
+      <label for="cep">CEP:</label>
+      <!-- Campo revertido para a forma anterior -->
+      <input type="text" id="cep" name="cep" placeholder="00000-000" required>
+
+      <label for="rua">Rua:</label>
+      <input type="text" id="rua" name="rua" placeholder="Rua" readonly required>
+
+      <label for="bairro">Bairro:</label>
+      <input type="text" id="bairro" name="bairro" placeholder="Bairro" readonly required>
+
+      <label for="cidade">Cidade:</label>
+      <input type="text" id="cidade" name="cidade" placeholder="Cidade" readonly required>
+      
+      <!-- Novo campo Número -->
+      <label for="numero">Número:</label>
+      <input type="text" id="numero" name="numero" placeholder="Número" required>
+
+      <label for="profissao">Profissão:</label>
+      <input type="text" id="profissao" name="profissao" placeholder="Sua profissão" required>
+
+      <label for="telefone">Telefone:</label>
+      <!-- Campo revertido para a forma anterior -->
+      <input type="text" id="telefone" name="telefone" placeholder="(00) 00000-0000" required>
+
+      <label for="tipoPlano">Tipo de Plano:</label>
+      <select id="tipoPlano" name="tipoPlano" required>
+        <option value="">Selecione</option>
+        <option value="Mensal">Mensal</option>
+        <option value="Trimestral">Trimestral</option>
+        <option value="Semestral">Semestral</option>
+        <option value="Anual">Anual</option>
+      </select>
+
+      <label for="formaPagamento">Forma de Pagamento:</label>
+      <select id="formaPagamento" name="formaPagamento" required>
+        <option value="">Selecione</option>
+        <option value="Pix">Pix</option>
+        <option value="Dinheiro">Dinheiro</option>
+        <option value="Cartão de Crédito">Cartão de Crédito</option>
+        <option value="Cartão de Débito">Cartão de Débito</option>
+      </select>
+
+      <div class="button-container">
+        <button type="button" id="gerarPDF">Gerar PDF</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Busca o endereço via CEP utilizando a API do ViaCEP
+    document.getElementById('cep').addEventListener('blur', function() {
+      let cep = this.value.replace(/\D/g, '');
+      if (cep.length !== 8) {
+        alert('CEP inválido! Certifique-se de digitar 8 números no formato correto.');
+        return;
+      }
+      fetch('https://viacep.com.br/ws/' + cep + '/json/')
+        .then(response => response.json())
+        .then(data => {
+          if(data.erro) {
+            alert('CEP não encontrado!');
+            return;
+          }
+          document.getElementById('rua').value = data.logradouro;
+          document.getElementById('bairro').value = data.bairro;
+          document.getElementById('cidade').value = data.localidade;
+        })
+        .catch(error => console.error('Erro:', error));
+    });
+
+    // Função para formatar a data (de "aaaa-mm-dd" para "dd/mm/aaaa")
+    function formatDate(dateStr) {
+      const parts = dateStr.split("-");
+      if(parts.length === 3) {
+        return parts[2] + "/" + parts[1] + "/" + parts[0];
+      }
+      return dateStr;
+    }
+
+    // Função para formatar o CEP (se conter 8 dígitos, formata como "xxxxx-xxx")
+    function formatCep(cep) {
+      let digits = cep.replace(/\D/g, '');
+      if (digits.length === 8) {
+        return digits.substring(0,5) + '-' + digits.substring(5);
+      }
+      return cep;
+    }
+
+    // Função para formatar o telefone
+    // Se tiver 11 dígitos: (XX) XXXXX-XXXX
+    // Se tiver 10 dígitos: (XX) XXXX-XXXX
+    function formatPhone(phone) {
+      let digits = phone.replace(/\D/g, '');
+      if (digits.length === 11) {
+        return '(' + digits.substring(0,2) + ') ' + digits.substring(2,7) + '-' + digits.substring(7);
+      } else if (digits.length === 10) {
+        return '(' + digits.substring(0,2) + ') ' + digits.substring(2,6) + '-' + digits.substring(6);
+      }
+      return phone;
+    }
+
+    // Gera o PDF com layout aprimorado e as cores Amarelo Canário e Azul Escuro
+    document.getElementById('gerarPDF').addEventListener('click', function() {
+      const nome = document.getElementById('nome').value;
+      const dataNascimento = document.getElementById('dataNascimento').value;
+      const cpf = document.getElementById('cpf').value;
+      const cep = document.getElementById('cep').value;
+      const rua = document.getElementById('rua').value;
+      const bairro = document.getElementById('bairro').value;
+      const cidade = document.getElementById('cidade').value;
+      const numero = document.getElementById('numero').value;
+      const profissao = document.getElementById('profissao').value;
+      const telefone = document.getElementById('telefone').value;
+      const tipoPlano = document.getElementById('tipoPlano').value;
+      const formaPagamento = document.getElementById('formaPagamento').value;
+
+      if (!nome || !dataNascimento || !cpf || !cep || !rua || !bairro || !cidade || !numero || !profissao || !telefone || !tipoPlano || !formaPagamento) {
+        alert('Por favor, preencha todos os campos corretamente.');
+        return;
+      }
+
+      const dataNascimentoFormatada = formatDate(dataNascimento);
+      // Aplica a formatação desejada para CEP e Telefone para o PDF
+      const cepFormatado = formatCep(cep);
+      const telefoneFormatado = formatPhone(telefone);
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Definindo as cores (RGB)
+      const darkBlue = [0, 51, 102];    // Azul Escuro (#003366)
+      const canaryYellow = [255, 239, 0]; // Amarelo Canário (#FFEF00)
+
+      // Cabeçalho do PDF: retângulo com fundo Azul Escuro
+      doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+
+      // Título do cabeçalho em Amarelo Canário, centralizado
+      doc.setFontSize(16);
+      doc.setTextColor(canaryYellow[0], canaryYellow[1], canaryYellow[2]);
+      doc.setFont('helvetica', 'bold');
+      const headerText = "Ficha de Cadastro - FAST CORREDORES";
+      const textWidth = doc.getTextWidth(headerText);
+      doc.text(headerText, (pageWidth - textWidth) / 2, 20);
+
+      // Linha divisória abaixo do cabeçalho (em Amarelo Canário)
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(canaryYellow[0], canaryYellow[1], canaryYellow[2]);
+      doc.line(10, 32, pageWidth - 10, 32);
+
+      // Conteúdo do PDF
+      doc.setFontSize(12);
+      doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+      let y = 42;
+      const lineHeight = 10;
+      const labelX = 20;
+      const valueX = 70;
+
+      // Função auxiliar para adicionar cada campo com rótulo e valor
+      function addField(label, value) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, labelX, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), valueX, y);
+        y += lineHeight;
+        // Linha divisória entre os campos
+        doc.setDrawColor(canaryYellow[0], canaryYellow[1], canaryYellow[2]);
+        doc.setLineWidth(0.2);
+        doc.line(labelX, y - 5, pageWidth - 20, y - 5);
+      }
+
+      addField("Nome:", nome);
+      addField("Data de Nascimento:", dataNascimentoFormatada);
+      addField("CPF:", cpf);
+      addField("CEP:", cepFormatado);
+      addField("Rua:", rua);
+      addField("Bairro:", bairro);
+      addField("Cidade:", cidade);
+      addField("Número:", numero);
+      addField("Profissão:", profissao);
+      addField("Telefone:", telefoneFormatado);
+      addField("Tipo de Plano:", tipoPlano);
+      addField("Forma de Pagamento:", formaPagamento);
+
+      // Adiciona data de emissão no rodapé
+      const now = new Date();
+      const currentDate = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear();
+      doc.setFontSize(10);
+      doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+      doc.text("Data de Emissão: " + currentDate, 20, pageHeight - 15);
+
+      // Rodapé com mensagem centralizada
+      doc.setFontSize(10);
+      doc.text("Gerado via sistema FAST CORREDORES", pageWidth / 2, pageHeight - 15, { align: 'center' });
+
+      // Gera e baixa o PDF
+      doc.save("Ficha_de_Cadastro_FAST_CORREDORES.pdf");
+    });
+  </script>
+</body>
+</html>
